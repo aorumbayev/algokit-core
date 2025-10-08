@@ -11,12 +11,18 @@ on:
         description: 'Whether to run the release (semantic-release) step'
         required: true
         type: boolean
+      verdaccio_url:
+        description: 'Optional external Verdaccio base URL (e.g. https://verdaccio.example.com)'
+        required: false
+        type: string
     secrets:
       BOT_ID:
         required: false
       BOT_SK:
         required: false
       NPM_TOKEN:
+        required: false
+      VERDACCIO_TOKEN:
         required: false
 
 jobs:
@@ -25,7 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       verdaccio:
-        image: verdaccio/verdaccio:5
+        if: ${{ !inputs.verdaccio_url }}
+        image: verdaccio/verdaccio:6
         ports:
           - 4873:4873
     defaults:
@@ -46,18 +53,38 @@ jobs:
           # Use the GitHub App token for release to allow creating releases / tags
           token: ${{ inputs.release && secrets.BOT_ID && secrets.BOT_SK && format('x-access-token:{0}', secrets.BOT_SK) || github.token }}
 
+      - name: Determine registry URL
+        id: reg
+        run: |
+          if [ -n "${{ inputs.verdaccio_url }}" ]; then
+            echo "url=${{ inputs.verdaccio_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=http://localhost:4873" >> $GITHUB_OUTPUT
+          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: 'http://localhost:4873'
+          registry-url: ${{ steps.reg.outputs.url }}
           cache: 'npm'
           cache-dependency-path: packages/typescript/package-lock.json
 
-      - name: Configure npm for Verdaccio
+      - name: Configure npm auth (Verdaccio/GitHub Packages)
         run: |
-          npm set registry http://localhost:4873
-          npm config set //localhost:4873/:_authToken "verdaccio-test-token"
+          REGISTRY="${{ steps.reg.outputs.url }}"
+          echo "Using registry $REGISTRY"
+          npm set registry "$REGISTRY"
+          HOST_PORT=${REGISTRY#*//}
+          HOST=${HOST_PORT%%/*}
+          if [ -n "${{ secrets.VERDACCIO_TOKEN }}" ]; then
+            echo "Configuring Verdaccio auth token"
+            npm config set //${HOST}/:_authToken "${{ secrets.VERDACCIO_TOKEN }}"
+          elif [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "Configuring NPM_TOKEN for registry"
+            npm config set //${HOST}/:_authToken "${{ secrets.NPM_TOKEN }}"
+          else
+            echo "No token provided; publish may fail if auth required";
+          fi
 
 
       - name: Install uv
@@ -86,6 +113,6 @@ jobs:
         working-directory: packages/typescript/${{ inputs.package }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NPM_TOKEN: "verdaccio-test-token"
-          NODE_AUTH_TOKEN: "verdaccio-test-token"
+          NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN || secrets.NPM_TOKEN || github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.VERDACCIO_TOKEN || secrets.NPM_TOKEN || github.token }}
         run: npx semantic-release

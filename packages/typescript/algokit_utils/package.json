@@ -57,6 +57,6 @@
     "@algorandfoundation/kmd-client": "../kmd_client/dist"
   },
   "publishConfig": {
-    "registry": "http://localhost:4873"
+    "registry": "https://npm.pkg.github.com"
   }
 }
