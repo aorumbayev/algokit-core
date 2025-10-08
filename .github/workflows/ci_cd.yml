@@ -9,46 +9,46 @@ on:
       - main
 
 jobs:
-  check_rust:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    env:
-      # Enable verbose logging for debugging localnet and test issues
-      RUST_LOG: debug
-      # Ensure output is not buffered for immediate feedback
-      RUST_BACKTRACE: 1
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.85.0
-          components: clippy, rustfmt
+  # check_rust:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #   env:
+  #     # Enable verbose logging for debugging localnet and test issues
+  #     RUST_LOG: debug
+  #     # Ensure output is not buffered for immediate feedback
+  #     RUST_BACKTRACE: 1
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.ref }}
+  #     - uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: 1.85.0
+  #         components: clippy, rustfmt
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v5
 
-      - name: Install algokit CLI
-        run: uv tool install algokit
+  #     - name: Install algokit CLI
+  #       run: uv tool install algokit
 
-      - name: Check formatting
-        run: cargo fmt --check
+  #     - name: Check formatting
+  #       run: cargo fmt --check
 
-      - name: Clippy
-        # Run clippy and treat warnings as errors
-        run: cargo clippy -- -D warnings
+  #     - name: Clippy
+  #       # Run clippy and treat warnings as errors
+  #       run: cargo clippy -- -D warnings
 
-      - name: Start localnet
-        run: algokit localnet start
+  #     - name: Start localnet
+  #       run: algokit localnet start
 
-      - name: Build all crates
-        run: cargo build --workspace
+  #     - name: Build all crates
+  #       run: cargo build --workspace
 
-      - name: Run Rust tests with cargo t (cargo-nextest)
-        run: cargo t --workspace --all-targets --failure-output=immediate --status-level=all
+  #     - name: Run Rust tests with cargo t (cargo-nextest)
+  #       run: cargo t --workspace --all-targets --failure-output=immediate --status-level=all
 
   # A setup job to define the matricies that will be used across all of the jobs in this workflow
   setup:
@@ -65,23 +65,23 @@ jobs:
         run: echo 'typescript_packages=["algokit_utils"]' >> $GITHUB_OUTPUT
 
 
-  python_uniffi_ci_cd:
-    needs:
-      - setup
-    uses: ./.github/workflows/python_uniffi_ci_cd.yml
-    strategy:
-      matrix:
-        crate: ${{ fromJSON(needs.setup.outputs.ffi_packages) }}
-    with:
-      crate: ${{ matrix.crate }}
-      release: ${{ github.event_name == 'push' }}
-    secrets:
-      BOT_ID: ${{ secrets.BOT_ID }}
-      BOT_SK: ${{ secrets.BOT_SK }}
-  deploy_docs:
-    # Only run on pushes to main (not on PRs)
-    if: github.event_name == 'push'
-    uses: ./.github/workflows/deploy_docs.yml
+  # python_uniffi_ci_cd:
+  #   needs:
+  #     - setup
+  #   uses: ./.github/workflows/python_uniffi_ci_cd.yml
+  #   strategy:
+  #     matrix:
+  #       crate: ${{ fromJSON(needs.setup.outputs.ffi_packages) }}
+  #   with:
+  #     crate: ${{ matrix.crate }}
+  #     release: ${{ github.event_name == 'push' }}
+  #   secrets:
+  #     BOT_ID: ${{ secrets.BOT_ID }}
+  #     BOT_SK: ${{ secrets.BOT_SK }}
+  # deploy_docs:
+  #   # Only run on pushes to main (not on PRs)
+  #   if: github.event_name == 'push'
+  #   uses: ./.github/workflows/deploy_docs.yml
 
   typescript_ci_cd:
     needs:

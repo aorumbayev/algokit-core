@@ -23,6 +23,11 @@ jobs:
   ci_cd:
     name: CI/CD (${{ inputs.package }})
     runs-on: ubuntu-latest
+    services:
+      verdaccio:
+        image: verdaccio/verdaccio:5
+        ports:
+          - 4873:4873
     defaults:
       run:
         shell: bash
@@ -45,9 +50,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'http://localhost:4873'
           cache: 'npm'
           cache-dependency-path: packages/typescript/package-lock.json
+
+      - name: Configure npm for Verdaccio
+        run: |
+          npm set registry http://localhost:4873
+          npm config set //localhost:4873/:_authToken "verdaccio-test-token"
 
 
       - name: Install uv
@@ -76,6 +86,6 @@ jobs:
         working-directory: packages/typescript/${{ inputs.package }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # Prefer provided NPM_TOKEN; fallback to GITHUB_TOKEN for GitHub Packages (if configured)
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN || github.token }}
+          NPM_TOKEN: "verdaccio-test-token"
+          NODE_AUTH_TOKEN: "verdaccio-test-token"
         run: npx semantic-release
