@@ -1,0 +1,85 @@
+name: TypeScript CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: 'The TypeScript package (folder name under packages/typescript) to build/test/release'
+        required: true
+        type: string
+      release:
+        description: 'Whether to run the release (semantic-release) step'
+        required: true
+        type: boolean
+    secrets:
+      BOT_ID:
+        required: false
+      BOT_SK:
+        required: false
+      NPM_TOKEN:
+        required: false
+
+jobs:
+  ci_cd:
+    name: CI/CD (${{ inputs.package }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+    env:
+      RUST_LOG: debug
+      RUST_BACKTRACE: 1
+    steps:
+      - name: Checkout (with App token if available)
+        uses: actions/checkout@v4
+        with:
+          # Use the GitHub App token for release to allow creating releases / tags
+          token: ${{ inputs.release && secrets.BOT_ID && secrets.BOT_SK && format('x-access-token:{0}', secrets.BOT_SK) || github.token }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: packages/typescript/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install algokit CLI
+        run: uv tool install algokit
+
+      - name: Install dependencies (workspace)
+        working-directory: packages/typescript
+        run: npm ci
+
+      - name: Build workspace
+        working-directory: packages/typescript
+        run: npm run build --workspaces --if-present
+
+      - name: Start localnet
+        run: algokit localnet start
+
+      - name: Run tests (target package)
+        working-directory: packages/typescript/${{ inputs.package }}
+        run: npm test --if-present
+
+      - name: Semantic Release
+        if: inputs.release
+        working-directory: packages/typescript/${{ inputs.package }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # Prefer provided NPM_TOKEN; fallback to GITHUB_TOKEN for GitHub Packages (if configured)
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN || github.token }}
+        run: npx semantic-release
