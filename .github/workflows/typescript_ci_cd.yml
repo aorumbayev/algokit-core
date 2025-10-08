@@ -49,10 +49,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: packages/typescript/package-lock.json
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.85.0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
