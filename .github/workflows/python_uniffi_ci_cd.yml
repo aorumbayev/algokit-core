@@ -58,7 +58,7 @@ jobs:
           node-version: 22
           cache: "npm"
       - working-directory: "."
-        run: npm install --no-audit --no-fund
+        run: npm install --no-fund
         if: inputs.release
       - name: Semantic Release (dry-run)
         if: inputs.release
@@ -279,7 +279,7 @@ jobs:
           cache: "npm"
 
       - working-directory: "."
-        run: npm install --no-audit --no-fund
+        run: npm install --no-fund
 
       - name: Semantic Release
         id: semantic_release

@@ -106,7 +106,7 @@ jobs:
           cache-dependency-path: packages/typescript/package-lock.json
 
       - name: Install root dependencies (semantic-release)
-        run: npm install --no-audit --no-fund
+        run: npm install --no-fund
 
       - name: Install dependencies (workspace)
         working-directory: packages/typescript

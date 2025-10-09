@@ -141,7 +141,7 @@ jobs:
         working-directory: packages/typescript
         run: |
           # Re-install to ensure dist folders are properly linked
-          npm install --prefer-offline --no-audit --no-fund
+          npm install --prefer-offline --no-fund
 
       - name: Test generated client
         working-directory: packages/typescript
