@@ -117,7 +117,11 @@ jobs:
           always-auth: true
 
       - name: Configure npm for Verdaccio
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
+          NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
         run: |
+          if [ -z "${{ secrets.VERDACCIO_TOKEN }}" ]; then echo "VERDACCIO_TOKEN is empty"; exit 1; fi
           REGISTRY="${{ inputs.verdaccio_url }}"
           REGISTRY="${REGISTRY%/}"
 
@@ -129,14 +133,15 @@ jobs:
           CONFIG_FILE="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
           echo "Using npm config file: $CONFIG_FILE"
           cat > "$CONFIG_FILE" << EOF
-          registry=$REGISTRY
+          registry=${REGISTRY%/}/
           //${HOST_NO_PROTO}/:_authToken=${{ secrets.VERDACCIO_TOKEN }}
           always-auth=true
           EOF
 
           awk '{ if ($0 ~ /_authToken=/) print "(token line present, value masked)"; else print }' "$CONFIG_FILE"
 
-          npm whoami --registry "$REGISTRY" || (echo '❌ Still failed' && exit 1)
+          echo "Attempting npm whoami (verbose)"
+          npm whoami --registry "$REGISTRY" --loglevel verbose || (echo '❌ Still failed' && exit 1)
           echo "✅ Successfully authenticated to Verdaccio"
 
       - name: Download build artifact
