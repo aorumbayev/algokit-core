@@ -60,7 +60,7 @@ jobs:
 
       - name: Build workspace
         working-directory: packages/typescript
-        run: npm run build --workspaces --if-present
+        run: npm -ws run build --if-present
 
       - name: Start localnet
         run: algokit localnet start

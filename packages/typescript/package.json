@@ -13,10 +13,10 @@
     "kmd_client"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm -ws run build --if-present",
     "build-watch": "npm run build-watch --workspace=algokit_common & npm run build-watch --workspace=algokit_abi & npm run build-watch --workspace=algokit_transact & npm run build-watch --workspace=algod_client & npm run build-watch --workspace=algokit_utils",
-    "test": "npm run test --workspaces --if-present",
-    "pre-commit": "npm run pre-commit --workspaces --if-present"
+    "test": "npm -ws run test --if-present",
+    "pre-commit": "npm -ws run pre-commit --if-present"
   },
   "engines": {
     "node": ">=20.0"
