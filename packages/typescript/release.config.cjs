@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
-const releaseUtils = require('../../../utils/semantic-release.cjs')
+const releaseUtils = require('../../utils/semantic-release.cjs')
 
 const config = releaseUtils.getConfig({
   language: 'typescript',
