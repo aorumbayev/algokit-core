@@ -106,6 +106,8 @@ jobs:
         with:
           ref: ${{ github.ref }}
           token: ${{ steps.app_token.outputs.token }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
