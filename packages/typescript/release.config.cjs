@@ -26,6 +26,16 @@ config.plugins = config.plugins.map((plugin) => {
   return plugin
 })
 
-config.plugins = [...config.plugins, ['@semantic-release/npm', { npmPublish: true }]]
+config.plugins = [
+  ...config.plugins,
+  [
+    '@semantic-release/npm',
+    {
+      npmPublish: true,
+      // Publish from the built package directory (relative to packages/typescript)
+      pkgRoot: `${packageName}/dist`,
+    },
+  ],
+]
 
 module.exports = config
