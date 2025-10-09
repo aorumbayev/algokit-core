@@ -69,14 +69,6 @@ jobs:
         working-directory: packages/typescript/${{ inputs.package }}
         run: npm test
 
-      - name: Upload build artifact
-        if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
-        uses: actions/upload-artifact@v4
-        with:
-          name: typescript-${{ inputs.package }}-build
-          path: packages/typescript/${{ inputs.package }}/dist
-          if-no-files-found: warn
-
   cd:
     name: CD (${{ inputs.package }})
     needs: ci
@@ -146,46 +138,9 @@ jobs:
           npm whoami --registry "$REGISTRY" --loglevel verbose || (echo '❌ Still failed' && exit 1)
           echo "✅ Successfully authenticated to Verdaccio"
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: typescript-${{ inputs.package }}-build
-          path: .
-
       - name: Install dependencies (workspace)
         working-directory: packages/typescript
         run: npm ci
-
-      - name: Debug publish diagnostics (temporary)
-        working-directory: packages/typescript
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
-        run: |
-          set -euxo pipefail
-          echo '--- Environment snapshot ---'
-          echo 'Node:' $(node -v)
-          echo 'NPM:' $(npm -v)
-          echo 'Working dir:' $(pwd)
-          echo 'Listing directory'
-          ls -al
-          echo 'Package name/version:'
-          node -p "require('./package.json').name + ' ' + require('./package.json').version"
-          echo 'NPM config list (concise)'
-          npm config list || true
-          echo 'Relevant npm env vars:'
-          env | sort | grep -i npm_ || true
-          echo 'User .npmrc:'
-          cat "$HOME/.npmrc" || true
-          echo 'Project .npmrc (if any):'
-          cat ../.npmrc || true
-          echo 'Root .npmrc (if any):'
-          cat ../../../.npmrc || true
-          echo 'Dry-run npm publish:'
-          npm publish --dry-run || echo 'npm publish dry-run failed (continuing)'
-          echo 'semantic-release dry run with debug:'
-          DEBUG=semantic-release:* npx semantic-release --dry-run || echo 'semantic-release dry-run failed (continuing)'
 
       - name: Semantic Release
         working-directory: packages/typescript
