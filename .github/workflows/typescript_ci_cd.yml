@@ -83,9 +83,6 @@ jobs:
       issues: write
       pull-requests: write
       packages: write
-    env:
-      RUST_LOG: debug
-      RUST_BACKTRACE: 1
 
     steps:
       - uses: actions/create-github-app-token@v1
@@ -101,14 +98,12 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Setup Node
+      - name: Setup Node (no registry)
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: ${{ inputs.verdaccio_url }}
           cache: "npm"
           cache-dependency-path: packages/typescript/package-lock.json
-          always-auth: true
 
       - name: Install root dependencies (semantic-release)
         run: npm install --no-audit --no-fund
@@ -120,6 +115,15 @@ jobs:
       - name: Build workspace
         working-directory: packages/typescript
         run: npm -ws run build
+
+      - name: Setup Node (Verdaccio auth for publish)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: ${{ inputs.verdaccio_url }}
+          cache: "npm"
+          cache-dependency-path: packages/typescript/package-lock.json
+          always-auth: true
 
       - name: Semantic Release
         working-directory: packages/typescript
