@@ -2,9 +2,12 @@
 /* eslint-disable no-undef */
 const releaseUtils = require('../../utils/semantic-release.cjs')
 
+const packageName = process.env.PACKAGE // set from workflow input
+if (!packageName) throw new Error('PACKAGE env var is required for release')
+
 const config = releaseUtils.getConfig({
   language: 'typescript',
-  packageName: 'algokit_utils',
+  packageName,
 })
 
 // Disable GitHub issue/PR commenting to avoid GraphQL rate limits
