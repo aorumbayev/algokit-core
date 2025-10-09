@@ -110,6 +110,9 @@ jobs:
           cache-dependency-path: packages/typescript/package-lock.json
           always-auth: true
 
+      - name: Install root dependencies (semantic-release)
+        run: npm install --no-audit --no-fund
+
       - name: Install dependencies (workspace)
         working-directory: packages/typescript
         run: npm ci
