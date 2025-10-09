@@ -60,7 +60,7 @@ jobs:
 
       - name: Build workspace
         working-directory: packages/typescript
-        run: npm -ws run build --if-present
+        run: npm -ws run build
 
       - name: Start localnet
         run: algokit localnet start
@@ -113,6 +113,10 @@ jobs:
       - name: Install dependencies (workspace)
         working-directory: packages/typescript
         run: npm ci
+
+      - name: Build workspace
+        working-directory: packages/typescript
+        run: npm -ws run build
 
       - name: Semantic Release
         working-directory: packages/typescript
