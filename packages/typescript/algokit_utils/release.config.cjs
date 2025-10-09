@@ -7,7 +7,6 @@ const config = releaseUtils.getConfig({
   packageName: 'algokit_utils',
 })
 
-// config.plugins = [...config.plugins, ['@semantic-release/npm', { npmPublish: true }]]
-config.plugins = [...config.plugins]
+config.plugins = [...config.plugins, ['@semantic-release/npm', { npmPublish: true }]]
 
 module.exports = config
