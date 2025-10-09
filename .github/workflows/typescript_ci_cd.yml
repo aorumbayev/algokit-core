@@ -23,13 +23,66 @@ on:
         required: true
 
 jobs:
-  ci_cd:
-    name: CI/CD (${{ inputs.package }})
+  ci:
+    name: CI (${{ inputs.package }})
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     permissions:
+      actions: write
+      contents: read
+    env:
+      RUST_LOG: debug
+      RUST_BACKTRACE: 1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: packages/typescript/package-lock.json
+
+      - name: Install algokit CLI
+        run: uv tool install algokit
+
+      - name: Install dependencies (workspace)
+        working-directory: packages/typescript
+        run: npm ci
+
+      - name: Build workspace
+        working-directory: packages/typescript
+        run: npm run build --workspaces --if-present
+
+      - name: Start localnet
+        run: algokit localnet start
+
+      - name: Run tests (target package)
+        working-directory: packages/typescript/${{ inputs.package }}
+        run: npm test
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-${{ inputs.package }}-build
+          path: packages/typescript/${{ inputs.package }}/dist
+          if-no-files-found: warn
+
+  cd:
+    name: CD (${{ inputs.package }})
+    needs: ci
+    if: inputs.release && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      actions: read
       contents: write
       issues: write
       pull-requests: write
@@ -40,22 +93,15 @@ jobs:
 
     steps:
       - uses: actions/create-github-app-token@v1
-        if: inputs.release
         id: app_token
         with:
           app-id: ${{ secrets.BOT_ID }}
           private-key: ${{ secrets.BOT_SK }}
 
       - uses: actions/checkout@v4
-        if: inputs.release
         with:
           ref: ${{ github.ref }}
           token: ${{ steps.app_token.outputs.token }}
-
-      - uses: actions/checkout@v4
-        if: ${{ !inputs.release }}
-        with:
-          ref: ${{ github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -82,26 +128,17 @@ jobs:
           npm whoami --registry "${{ inputs.verdaccio_url }}" || (echo '❌ Authentication failed' && exit 1)
           echo "Successfully authenticated to Verdaccio"
 
-      - name: Install algokit CLI
-        run: uv tool install algokit
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: typescript-${{ inputs.package }}-build
+          path: .
 
       - name: Install dependencies (workspace)
         working-directory: packages/typescript
         run: npm ci
 
-      - name: Build workspace
-        working-directory: packages/typescript
-        run: npm run build --workspaces --if-present
-
-      - name: Start localnet
-        run: algokit localnet start
-
-      - name: Run tests (target package)
-        working-directory: packages/typescript/${{ inputs.package }}
-        run: npm test
-
       - name: Semantic Release
-        if: inputs.release
         working-directory: packages/typescript/${{ inputs.package }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
