@@ -71,7 +71,7 @@ jobs:
 
   cd:
     name: CD (${{ inputs.package }})
-    # needs: ci
+    needs: ci
     if: inputs.release && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     defaults:
