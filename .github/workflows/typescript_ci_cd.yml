@@ -47,9 +47,15 @@ jobs:
           private-key: ${{ secrets.BOT_SK }}
 
       - uses: actions/checkout@v4
+        if: inputs.release
         with:
           ref: ${{ github.ref }}
           token: ${{ steps.app_token.outputs.token }}
+
+      - uses: actions/checkout@v4
+        if: !inputs.release
+        with:
+          ref: ${{ github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
