@@ -1,0 +1,138 @@
+name: TypeScript CI/CD
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: "The TypeScript package (folder name under packages/typescript) to build/test/release"
+        required: true
+        type: string
+      release:
+        description: "Whether to run the release (semantic-release) step"
+        required: true
+        type: boolean
+      verdaccio_url:
+        description: "External Verdaccio base URL (e.g. https://verdaccio.example.com)"
+        required: true
+        type: string
+    secrets:
+      BOT_ID:
+        required: false
+      BOT_SK:
+        required: false
+      VERDACCIO_TOKEN:
+        required: true
+
+jobs:
+  ci:
+    name: CI (${{ inputs.package }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      actions: write
+      contents: read
+    env:
+      RUST_LOG: debug
+      RUST_BACKTRACE: 1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: packages/typescript/package-lock.json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install algokit CLI
+        run: uv tool install algokit
+
+      - name: Install dependencies (workspace)
+        working-directory: packages/typescript
+        run: npm ci
+
+      - name: Build workspace
+        working-directory: packages/typescript
+        run: npm -ws run build
+
+      - name: Start localnet
+        run: algokit localnet start
+
+      - name: Run tests (target package)
+        working-directory: packages/typescript/${{ inputs.package }}
+        run: npm test
+
+  cd:
+    name: CD (${{ inputs.package }})
+    # needs: ci
+    if: inputs.release && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app_token
+        with:
+          app-id: ${{ secrets.BOT_ID }}
+          private-key: ${{ secrets.BOT_SK }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ steps.app_token.outputs.token }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Node (no registry)
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: packages/typescript/package-lock.json
+
+      - name: Install root dependencies (semantic-release)
+        run: npm install --no-audit --no-fund
+
+      - name: Install dependencies (workspace)
+        working-directory: packages/typescript
+        run: npm ci
+
+      - name: Build workspace
+        working-directory: packages/typescript
+        run: npm -ws run build
+
+      - name: Setup Node (Verdaccio auth for publish)
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: ${{ inputs.verdaccio_url }}
+          cache: "npm"
+          cache-dependency-path: packages/typescript/package-lock.json
+          always-auth: true
+
+      - name: Semantic Release
+        working-directory: packages/typescript
+        env:
+          PACKAGE: ${{ inputs.package }}
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
+        run: |
+          # Ensure semantic-release uses Verdaccio
+          npm config list
+          npx semantic-release

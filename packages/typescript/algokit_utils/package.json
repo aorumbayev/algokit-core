@@ -55,8 +55,5 @@
     "@algorandfoundation/algokit-transact": "../algokit_transact/dist",
     "@algorandfoundation/indexer-client": "../indexer_client/dist",
     "@algorandfoundation/kmd-client": "../kmd_client/dist"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }
