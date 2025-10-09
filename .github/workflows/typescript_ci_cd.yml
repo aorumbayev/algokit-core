@@ -53,7 +53,7 @@ jobs:
           token: ${{ steps.app_token.outputs.token }}
 
       - uses: actions/checkout@v4
-        if: !inputs.release
+        if: ${{ !inputs.release }}
         with:
           ref: ${{ github.ref }}
 
