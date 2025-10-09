@@ -114,6 +114,7 @@ jobs:
           registry-url: ${{ inputs.verdaccio_url }}
           cache: "npm"
           cache-dependency-path: packages/typescript/package-lock.json
+          always-auth: true
 
       - name: Configure npm for Verdaccio
         run: |
@@ -122,13 +123,18 @@ jobs:
 
           echo "Configuring npm for Verdaccio at: $REGISTRY"
 
-          # Method 1: Create .npmrc file directly (most reliable)
-          cat > ~/.npmrc << EOF
+          # Create .npmrc with proper auth token format
+          HOST_NO_PROTO=${REGISTRY#https://}
+          HOST_NO_PROTO=${HOST_NO_PROTO#http://}
+          CONFIG_FILE="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          echo "Using npm config file: $CONFIG_FILE"
+          cat > "$CONFIG_FILE" << EOF
           registry=$REGISTRY
-          ${REGISTRY#https:}:_authToken=${{ secrets.VERDACCIO_TOKEN }}
-          ${REGISTRY#http:}:_authToken=${{ secrets.VERDACCIO_TOKEN }}
+          //${HOST_NO_PROTO}/:_authToken=${{ secrets.VERDACCIO_TOKEN }}
           always-auth=true
           EOF
+
+          awk '{ if ($0 ~ /_authToken=/) print "(token line present, value masked)"; else print }' "$CONFIG_FILE"
 
           npm whoami --registry "$REGISTRY" || (echo '❌ Still failed' && exit 1)
           echo "✅ Successfully authenticated to Verdaccio"
