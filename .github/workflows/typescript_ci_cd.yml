@@ -157,7 +157,7 @@ jobs:
         run: npm ci
 
       - name: Debug publish diagnostics (temporary)
-        working-directory: packages/typescript/${{ inputs.package }}
+        working-directory: packages/typescript
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
@@ -188,7 +188,7 @@ jobs:
           DEBUG=semantic-release:* npx semantic-release --dry-run || echo 'semantic-release dry-run failed (continuing)'
 
       - name: Semantic Release
-        working-directory: packages/typescript/${{ inputs.package }}
+        working-directory: packages/typescript
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
