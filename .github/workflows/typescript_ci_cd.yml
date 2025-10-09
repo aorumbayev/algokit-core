@@ -1,5 +1,4 @@
 name: TypeScript CI/CD
-
 on:
   workflow_call:
     inputs:
@@ -20,8 +19,6 @@ on:
         required: false
       BOT_SK:
         required: false
-      NPM_TOKEN:
-        required: false
       VERDACCIO_TOKEN:
         required: true
 
@@ -29,7 +26,6 @@ jobs:
   ci_cd:
     name: CI/CD (${{ inputs.package }})
     runs-on: ubuntu-latest
-
     defaults:
       run:
         shell: bash
@@ -41,37 +37,44 @@ jobs:
     env:
       RUST_LOG: debug
       RUST_BACKTRACE: 1
-    steps:
-      - name: Checkout (with App token if available)
-        uses: actions/checkout@v4
-        with:
-          # Use the GitHub App token for release to allow creating releases / tags
-          token: ${{ inputs.release && secrets.BOT_ID && secrets.BOT_SK && format('x-access-token:{0}', secrets.BOT_SK) || github.token }}
 
-      - name: Set registry URL
-        id: reg
-        run: echo "url=${{ inputs.verdaccio_url }}" >> $GITHUB_OUTPUT
+    steps:
+      - uses: actions/create-github-app-token@v1
+        if: inputs.release
+        id: app_token
+        with:
+          app-id: ${{ secrets.BOT_ID }}
+          private-key: ${{ secrets.BOT_SK }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ steps.app_token.outputs.token }}
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: ${{ steps.reg.outputs.url }}
+          registry-url: ${{ inputs.verdaccio_url }}
           cache: 'npm'
           cache-dependency-path: packages/typescript/package-lock.json
 
-      - name: Configure npm auth (Verdaccio)
+      - name: Configure npm for Verdaccio
         run: |
-          REGISTRY="${{ steps.reg.outputs.url }}"
-          echo "Using registry $REGISTRY"
-          npm set registry "$REGISTRY"
+          # Setting registry globally ensures all npm operations use Verdaccio
+          npm config set registry "${{ inputs.verdaccio_url }}"
+
+          # Extract host from URL for auth token configuration
+          REGISTRY="${{ inputs.verdaccio_url }}"
           HOST_PORT=${REGISTRY#*//}
           HOST=${HOST_PORT%%/*}
+
+          # Set auth token for the Verdaccio host
           npm config set //${HOST}/:_authToken "${{ secrets.VERDACCIO_TOKEN }}"
-          npm whoami --registry "$REGISTRY" || (echo 'Auth failed' && exit 1)
 
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+          # Verify authentication is working
+          npm whoami --registry "${{ inputs.verdaccio_url }}" || (echo '❌ Authentication failed' && exit 1)
+          echo "Successfully authenticated to Verdaccio"
 
       - name: Install algokit CLI
         run: uv tool install algokit
@@ -89,7 +92,7 @@ jobs:
 
       - name: Run tests (target package)
         working-directory: packages/typescript/${{ inputs.package }}
-        run: npm test --if-present
+        run: npm test
 
       - name: Semantic Release
         if: inputs.release
@@ -98,4 +101,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.VERDACCIO_TOKEN }}
-        run: npx semantic-release
+        run: |
+          # Ensure semantic-release uses Verdaccio
+          npm config list
+          npx semantic-release
