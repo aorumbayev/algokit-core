@@ -16,7 +16,7 @@ module.exports = {
 
     return {
       branches: ["release", { name: "main", prerelease: "alpha" }],
-      repositoryUrl: "https://github.com/algorandfoundation/algokit-core",
+      repositoryUrl: "https://github.com/aorumbayev/algokit-core",
       tagFormat: `${language}/${packageName}` + "@${version}",
       plugins: [
         [
