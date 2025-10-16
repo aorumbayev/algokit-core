@@ -56,11 +56,11 @@ jobs:
 
       - name: Install dependencies (workspace)
         working-directory: packages/typescript
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build workspace
         working-directory: packages/typescript
-        run: npm -ws run build
+        run: npm run build
 
       - name: Start localnet
         run: algokit localnet start
@@ -114,7 +114,7 @@ jobs:
 
       - name: Build workspace
         working-directory: packages/typescript
-        run: npm -ws run build
+        run: npm run build
 
       - name: Setup Node (Verdaccio auth for publish)
         uses: actions/setup-node@v5
