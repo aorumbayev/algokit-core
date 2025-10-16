@@ -52,19 +52,20 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ steps.app_token.outputs.token }}
         if: inputs.release
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v5
         if: inputs.release
         with:
-          bun-version: latest
+          node-version: 22
+          cache: "npm"
       - working-directory: "."
-        run: bun install
+        run: npm install --no-fund
         if: inputs.release
       - name: Semantic Release (dry-run)
         if: inputs.release
         id: semantic_release
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
-        run: bun semantic-release --dry-run
+        run: npx semantic-release --dry-run
       - name: Convert to Python Version
         if: steps.semantic_release.outputs.version != ''
         id: convert_version
@@ -272,18 +273,19 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v5
         with:
-          bun-version: latest
+          node-version: 22
+          cache: "npm"
 
       - working-directory: "."
-        run: bun install
+        run: npm install --no-fund
 
       - name: Semantic Release
         id: semantic_release
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
-        run: bun semantic-release
+        run: npx semantic-release
 
   cleanup:
     if: inputs.release && (failure() || cancelled())
